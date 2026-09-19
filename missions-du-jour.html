@@ -382,8 +382,9 @@ body{
 
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-/* ===== injecte les repères d'angle (crosshair) dans chaque .frame ===== */
+/* injecte les repères d'angle (crosshair) dans chaque .frame */
 const CROSS_SVG = `<svg viewBox="0 0 11 11" xmlns="http://www.w3.org/2000/svg">
   <circle cx="5.5" cy="5.5" r="4.2" fill="none" stroke="#5c6274" stroke-width="1"/>
   <path d="M5.5 0v3M5.5 8v3M0 5.5h3M8 5.5h3" stroke="#5c6274" stroke-width="1"/>
@@ -541,12 +542,6 @@ function getMissionDayIndex(date){
   const epoch = new Date(2026,0,1);
   return Math.floor((effectiveDate - epoch) / 86400000);
 }
-function getCurrentMission(username){
-  const dayIndex = getMissionDayIndex(new Date());
-  const h = hashStr(username + '::' + dayIndex);
-  const i = h % MISSIONS.length;
-  return { mission: MISSIONS[i], dayIndex };
-}
 function getNextRotation(){
   const now = new Date(); const next = new Date(now);
   next.setHours(17,0,0,0);
@@ -559,19 +554,32 @@ function formatCountdown(ms){
   return String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
 }
 
-// ===================== AUTH (prototype local) =====================
-const LS_USERS='missions_users', LS_SESSION='missions_session', LS_STATUS_PREFIX='missions_status_';
-function getUsers(){ try{ return JSON.parse(localStorage.getItem(LS_USERS))||{}; }catch(e){ return {}; } }
-function saveUsers(u){ localStorage.setItem(LS_USERS, JSON.stringify(u)); }
-function getSession(){ return localStorage.getItem(LS_SESSION); }
-function setSession(u){ localStorage.setItem(LS_SESSION, u); }
-function clearSession(){ localStorage.removeItem(LS_SESSION); }
+// ===================== SUPABASE =====================
+const SUPABASE_URL = 'https://mxkpraaqnwqgnwenjatm.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im14a3ByYWFxbndxZ253ZW5qYXRtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk4MDA3NDksImV4cCI6MjEwNTM3Njc0OX0.HvHnpEDp4cit89HdGKwHoumAC_egF38Jm8J_yC8oxr4';
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+async function hashPassword(pw){
+  const enc = new TextEncoder().encode(pw);
+  const buf = await crypto.subtle.digest('SHA-256', enc);
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+// ===================== AUTH (comptes stockés dans Supabase) =====================
+const LS_ID='missions_citoyen_id', LS_NOM='missions_citoyen_nom';
+function getSession(){
+  const id=localStorage.getItem(LS_ID), nom=localStorage.getItem(LS_NOM);
+  return (id && nom) ? {id, nom} : null;
+}
+function setSession(id, nom){ localStorage.setItem(LS_ID, id); localStorage.setItem(LS_NOM, nom); }
+function clearSession(){ localStorage.removeItem(LS_ID); localStorage.removeItem(LS_NOM); }
 
 let authMode='login';
 const authScreen=document.getElementById('auth-screen'), dashboard=document.getElementById('dashboard');
 const authTitle=document.getElementById('auth-title'), authEyebrow=document.getElementById('auth-eyebrow');
 const authToggleText=document.getElementById('auth-toggle-text'), authToggleBtn=document.getElementById('auth-toggle-btn');
 const authError=document.getElementById('auth-error'), logoutBtn=document.getElementById('logout-btn');
+const authSubmitBtn=document.getElementById('auth-submit');
 
 authToggleBtn.addEventListener('click', ()=>{
   authMode = authMode==='login' ? 'signup' : 'login';
@@ -585,78 +593,122 @@ authToggleBtn.addEventListener('click', ()=>{
   }
 });
 
-document.getElementById('auth-submit').addEventListener('click', ()=>{
-  const username=document.getElementById('auth-username').value.trim();
+authSubmitBtn.addEventListener('click', async () => {
+  const identifiant=document.getElementById('auth-username').value.trim();
   const password=document.getElementById('auth-password').value;
   authError.textContent='';
-  if(!username || !password){ authError.textContent='Identifiant et mot de passe requis.'; return; }
-  const users=getUsers();
-  if(authMode==='signup'){
-    if(users[username]){ authError.textContent='Cet identifiant existe déjà.'; return; }
-    users[username]={password}; saveUsers(users); setSession(username); enterDashboard(username);
-  } else {
-    if(!users[username] || users[username].password!==password){ authError.textContent='Identifiant ou mot de passe incorrect.'; return; }
-    setSession(username); enterDashboard(username);
+  if(!identifiant || !password){ authError.textContent='Identifiant et mot de passe requis.'; return; }
+  authSubmitBtn.disabled=true; authSubmitBtn.textContent='…';
+  try{
+    const hash = await hashPassword(password);
+    if(authMode==='signup'){
+      const { data: existing } = await sb.from('citoyens').select('id').eq('identifiant', identifiant).maybeSingle();
+      if(existing){ authError.textContent='Cet identifiant existe déjà.'; return; }
+      const { data: created, error } = await sb.from('citoyens')
+        .insert({ identifiant, mot_de_passe_hash: hash })
+        .select('id, identifiant').single();
+      if(error) throw error;
+      setSession(created.id, created.identifiant);
+      await enterDashboard(created.id, created.identifiant);
+    } else {
+      const { data: user, error } = await sb.from('citoyens')
+        .select('id, identifiant, mot_de_passe_hash').eq('identifiant', identifiant).maybeSingle();
+      if(error) throw error;
+      if(!user || user.mot_de_passe_hash !== hash){ authError.textContent='Identifiant ou mot de passe incorrect.'; return; }
+      sb.from('citoyens').update({ derniere_connexion: new Date().toISOString() }).eq('id', user.id).then(()=>{});
+      setSession(user.id, user.identifiant);
+      await enterDashboard(user.id, user.identifiant);
+    }
+  } catch(err){
+    console.error(err);
+    authError.textContent = 'Connexion au serveur impossible. Réessaie.';
+  } finally {
+    authSubmitBtn.disabled=false; authSubmitBtn.textContent='Entrer';
   }
 });
 logoutBtn.addEventListener('click', ()=>{ clearSession(); location.reload(); });
 
-// ===================== DEMO DATA =====================
-const DEMO_PLAYERS = ['Kessy','Théo_R','Nova','M.Vance','Iris'];
-
-function renderHistory(username, dayIndex){
-  const list=document.getElementById('history-list'); list.innerHTML='';
-  document.getElementById('history-date').textContent =
-    new Date().toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'}).toUpperCase();
-
-  const rows=[{name:username,isYou:true}, ...DEMO_PLAYERS.map(n=>({name:n,isYou:false}))];
-  let doneCount=0;
-  rows.forEach((p,i)=>{
-    let done;
-    if(p.isYou){ done = localStorage.getItem(LS_STATUS_PREFIX+dayIndex+'_'+username)==='1'; }
-    else { done = ((p.name.charCodeAt(0)+dayIndex)%3) !== 0; }
-    if(done) doneCount++;
-    const row=document.createElement('div'); row.className='history-row';
-    row.innerHTML = `
-      <span class="player-id">#${String(100+i).padStart(3,'0')}</span>
-      <span class="player-name">${p.name}${p.isYou?'<span class="you-tag">TOI</span>':''}</span>
-      <span class="status-tag ${done?'done':'pending'}"><span class="box"></span>${done?'Effectuée':'Non effectuée'}</span>
-    `;
-    list.appendChild(row);
-  });
-  const pct = Math.round((doneCount/rows.length)*100);
-  document.getElementById('gauge').style.setProperty('--pct', pct);
-  document.getElementById('gauge-pct').textContent = pct+'%';
-  document.getElementById('gauge-count').textContent = doneCount+' / '+rows.length;
+// ===================== ATTRIBUTION DE MISSION (sans doublon le même jour) =====================
+async function getOrAssignMission(citoyenId){
+  const dayIndex = getMissionDayIndex(new Date());
+  const { data: existing } = await sb.from('attributions')
+    .select('id, mission_code, effectuee').eq('citoyen_id', citoyenId).eq('jour', dayIndex).maybeSingle();
+  if(existing){
+    const mission = MISSIONS.find(m => m.code === existing.mission_code) || MISSIONS[0];
+    return { mission, dayIndex, attributionId: existing.id, effectuee: existing.effectuee };
+  }
+  const { data: usedRows } = await sb.from('attributions').select('mission_code').eq('jour', dayIndex);
+  const usedCodes = new Set((usedRows||[]).map(r => r.mission_code));
+  let pool = MISSIONS.filter(m => !usedCodes.has(m.code));
+  if(pool.length === 0) pool = MISSIONS;
+  const mission = pool[Math.floor(Math.random()*pool.length)];
+  const { data: inserted, error } = await sb.from('attributions')
+    .insert({ citoyen_id: citoyenId, jour: dayIndex, mission_code: mission.code, effectuee:false })
+    .select('id, effectuee').single();
+  if(error){
+    const { data: retry } = await sb.from('attributions')
+      .select('id, mission_code, effectuee').eq('citoyen_id', citoyenId).eq('jour', dayIndex).maybeSingle();
+    if(retry){
+      const m2 = MISSIONS.find(m => m.code === retry.mission_code) || mission;
+      return { mission:m2, dayIndex, attributionId: retry.id, effectuee: retry.effectuee };
+    }
+    throw error;
+  }
+  return { mission, dayIndex, attributionId: inserted.id, effectuee: inserted.effectuee };
 }
 
-function renderMission(username){
-  const {mission, dayIndex} = getCurrentMission(username);
+function renderMission(mission){
   document.getElementById('mission-code').textContent = mission.code;
   document.getElementById('mission-title').textContent = mission.title;
   document.getElementById('mission-text').innerHTML = mission.steps.map(s =>
     `<span class="line">${s.replace(/«([^»]+)»/g, '<span class="quote">«$1»</span>')}</span>`).join('');
   const heartsEl = document.getElementById('difficulty-hearts');
-  let hearts='';
-  for(let i=1;i<=5;i++){ hearts += `<span class="${i<=mission.diff?'filled':'empty'}">♥</span>`; }
+  let hearts=''; for(let i=1;i<=5;i++){ hearts += `<span class="${i<=mission.diff?'filled':'empty'}">♥</span>`; }
   heartsEl.innerHTML = hearts;
-  return dayIndex;
 }
 
-function renderCheckState(username, dayIndex){
+async function renderHistory(dayIndex, myCitoyenId){
+  document.getElementById('history-date').textContent =
+    new Date().toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'}).toUpperCase();
+  const list=document.getElementById('history-list'); list.innerHTML='';
+  const { data: rows, error } = await sb.from('attributions')
+    .select('citoyen_id, effectuee, citoyens(identifiant)')
+    .eq('jour', dayIndex).order('created_at', { ascending:true });
+  if(error){ console.error(error); return; }
+  let doneCount=0;
+  (rows||[]).forEach((r,i) => {
+    const isYou = r.citoyen_id === myCitoyenId;
+    const nom = r.citoyens ? r.citoyens.identifiant : '???';
+    if(r.effectuee) doneCount++;
+    const row=document.createElement('div'); row.className='history-row';
+    row.innerHTML = `
+      <span class="player-id">#${String(100+i).padStart(3,'0')}</span>
+      <span class="player-name">${nom}${isYou?'<span class="you-tag">TOI</span>':''}</span>
+      <span class="status-tag ${r.effectuee?'done':'pending'}"><span class="box"></span>${r.effectuee?'Effectuée':'Non effectuée'}</span>
+    `;
+    list.appendChild(row);
+  });
+  const total = (rows||[]).length || 1;
+  const pct = Math.round((doneCount/total)*100);
+  document.getElementById('gauge').style.setProperty('--pct', pct);
+  document.getElementById('gauge-pct').textContent = pct+'%';
+  document.getElementById('gauge-count').textContent = doneCount+' / '+(rows?rows.length:0);
+}
+
+function renderCheckState(attributionId, initialDone, onToggled){
   const toggle=document.getElementById('check-toggle'), label=document.getElementById('check-label');
-  const key=LS_STATUS_PREFIX+dayIndex+'_'+username;
+  let done = initialDone;
   function refresh(){
-    const done = localStorage.getItem(key)==='1';
     toggle.classList.toggle('checked', done);
     label.textContent = done ? 'Mission effectuée' : 'Mission non effectuée';
   }
   refresh();
-  toggle.onclick = () => {
-    const done = localStorage.getItem(key)==='1';
-    localStorage.setItem(key, done?'0':'1');
-    refresh();
-    renderHistory(username, dayIndex);
+  toggle.onclick = async () => {
+    done = !done; refresh();
+    const { error } = await sb.from('attributions')
+      .update({ effectuee: done, updated_at: new Date().toISOString() }).eq('id', attributionId);
+    if(error){ console.error(error); done = !done; refresh(); return; }
+    onToggled();
   };
 }
 
@@ -666,17 +718,18 @@ function startCountdown(){
   tick(); setInterval(tick,1000);
 }
 
-function enterDashboard(username){
+async function enterDashboard(citoyenId, nom){
   authScreen.style.display='none'; dashboard.style.display='block'; logoutBtn.style.display='inline-block';
-  const dayIndex = renderMission(username);
-  renderHistory(username, dayIndex);
-  renderCheckState(username, dayIndex);
+  const { mission, dayIndex, attributionId, effectuee } = await getOrAssignMission(citoyenId);
+  renderMission(mission);
+  await renderHistory(dayIndex, citoyenId);
+  renderCheckState(attributionId, effectuee, () => renderHistory(dayIndex, citoyenId));
   startCountdown();
 }
 
 (function init(){
   const session=getSession();
-  if(session){ enterDashboard(session); }
+  if(session){ enterDashboard(session.id, session.nom); }
 })();
 </script>
 
