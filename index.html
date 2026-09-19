@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MISSIONS_DU_JOUR // FILE_014</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#eef1fb;
+  --panel: rgba(255,255,255,0.5);
+  --panel-solid:#ffffff;
+  --line: rgba(25,28,55,0.10);
+  --line-bright: rgba(25,28,55,0.24);
+  --blue:#3355ff;
+  --blue-bright:#4d6bff;
+  --blue-glow: rgba(77,107,255,0.30);
+  --violet:#9257ff;
+  --pink:#ff7ad1;
+  --cyan:#3fd2ff;
+  --chrome:#5b6079;
+  --chrome-dim:#9096b0;
+  --text:#14162a;
+  --text-dim:#666c8c;
+  --text-faint:#a2a7c0;
+  --holo: linear-gradient(115deg, var(--cyan) 0%, var(--blue-bright) 30%, var(--violet) 60%, var(--pink) 85%, var(--cyan) 100%);
+  --font-display:'Archivo Black', Impact, sans-serif;
+  --font-mono:'Space Mono','Courier New',monospace;
+}
+*{box-sizing:border-box; margin:0; padding:0;}
+html,body{background:var(--bg); color:var(--text); min-height:100%;}
+body{
+  font-family: var(--font-mono);
+  position:relative;
+  overflow-x:hidden;
+}
+
+/* ===== ambient backgrounds : blobs flous holographiques + dithering ===== */
+.bg-halo{ position:fixed; inset:0; z-index:0; pointer-events:none; overflow:hidden; }
+.blob{ position:absolute; border-radius:50%; filter: blur(90px); opacity:0.55; animation: drift 24s ease-in-out infinite; }
+.blob-1{ width:620px; height:620px; top:-180px; left:-160px; background: radial-gradient(circle, var(--blue-bright), transparent 70%); animation-delay:0s; }
+.blob-2{ width:520px; height:520px; top:10%; right:-200px; background: radial-gradient(circle, var(--violet), transparent 70%); animation-delay:-8s; }
+.blob-3{ width:560px; height:560px; bottom:-220px; left:20%; background: radial-gradient(circle, var(--cyan), transparent 70%); animation-delay:-16s; opacity:0.4; }
+@keyframes drift{
+  0%,100%{ transform: translate(0,0) scale(1); }
+  50%{ transform: translate(30px,-25px) scale(1.08); }
+}
+.bg-noise{
+  position:fixed; inset:0; z-index:1; pointer-events:none;
+  opacity:0.035; mix-blend-mode:multiply;
+}
+.page{ position:relative; z-index:2; max-width:1180px; margin:0 auto; padding: 0 0 60px; }
+
+/* ===== fiche technique : cadre en verre à coins repères ===== */
+.frame{
+  position:relative;
+  border:1px solid var(--line);
+  background: var(--panel);
+  backdrop-filter: blur(18px) saturate(160%);
+  box-shadow: 0 12px 40px rgba(60,70,160,0.10);
+}
+.corner-mark{ position:absolute; width:11px; height:11px; pointer-events:none; }
+.corner-mark svg{ width:100%; height:100%; display:block; }
+.corner-mark.tl{ top:-5px; left:-5px; }
+.corner-mark.tr{ top:-5px; right:-5px; }
+.corner-mark.bl{ bottom:-5px; left:-5px; }
+.corner-mark.br{ bottom:-5px; right:-5px; }
+
+.eyebrow{ font-size:10px; letter-spacing:0.14em; color:var(--text-dim); text-transform:uppercase; }
+
+/* ===== hero header ===== */
+.hero{
+  position:relative;
+  padding: 22px 24px 26px;
+  border-bottom:1px solid var(--line);
+  overflow:hidden;
+}
+.hero-grid{
+  position:absolute; inset:0; opacity:0.5; pointer-events:none;
+}
+.hero-row1{
+  display:flex; align-items:flex-start; justify-content:space-between;
+  position:relative; z-index:1; margin-bottom:6px;
+}
+.ref-code{ font-size:11px; letter-spacing:0.1em; color:var(--chrome-dim); }
+.hero-icons{ display:flex; align-items:center; gap:16px; }
+.hero-icons svg{ width:22px; height:22px; }
+.status-pill{
+  display:flex; align-items:center; gap:6px; font-size:10px; letter-spacing:0.08em;
+  color:var(--text-dim); border:1px solid var(--line); padding:5px 9px; text-transform:uppercase;
+}
+.status-pill .dot{ width:6px; height:6px; border-radius:50%; background:var(--cyan); box-shadow:0 0 8px var(--cyan); }
+.logout-btn{
+  background:none; border:1px solid var(--line); color:var(--text-dim);
+  font-family:var(--font-mono); font-size:10px; letter-spacing:0.08em;
+  padding:5px 10px; cursor:pointer; text-transform:uppercase; display:none;
+}
+.logout-btn:hover{ border-color:var(--line-bright); color:var(--text); }
+
+.hero-title{
+  position:relative; z-index:1;
+  font-family:var(--font-display);
+  font-size: clamp(46px, 10.5vw, 128px);
+  line-height:0.84;
+  letter-spacing:-0.01em;
+  margin: 6px -3px 10px -2px;
+  text-transform:uppercase;
+  background: var(--holo);
+  background-size: 300% 300%;
+  -webkit-background-clip:text; background-clip:text; color:transparent;
+  width: fit-content;
+  animation: holoShift 14s ease-in-out infinite;
+  filter: drop-shadow(0 0 30px rgba(146,87,255,0.18));
+}
+@keyframes holoShift{
+  0%,100%{ background-position:0% 50%; }
+  50%{ background-position:100% 50%; }
+}
+.hero-meta{
+  position:relative; z-index:1;
+  display:flex; flex-wrap:wrap; gap:18px;
+  font-size:11px; letter-spacing:0.08em; color:var(--text-dim); text-transform:uppercase;
+}
+.hero-meta b{ color:var(--text); font-weight:normal; }
+.ruler{
+  position:relative; z-index:1; margin-top:14px;
+  height:6px; opacity:0.6;
+  background-image: repeating-linear-gradient(90deg, var(--line-bright) 0 1px, transparent 1px 24px);
+  -webkit-mask-image: linear-gradient(90deg, transparent, black 8%, black 92%, transparent);
+  mask-image: linear-gradient(90deg, transparent, black 8%, black 92%, transparent);
+}
+
+/* ===== auth screen ===== */
+#auth-screen{
+  min-height: 60vh; display:flex; align-items:center; justify-content:center; padding:40px 24px;
+}
+.auth-card{ width:100%; max-width:380px; padding:30px; }
+.auth-card .eyebrow{ margin-bottom:6px; }
+.auth-title{ font-family:var(--font-display); font-size:26px; text-transform:uppercase; margin-bottom:22px; }
+.field{ margin-bottom:16px; }
+.field label{ display:block; font-size:10px; color:var(--text-dim); letter-spacing:0.1em; text-transform:uppercase; margin-bottom:6px; }
+.field input{
+  width:100%; background:var(--panel-solid); border:1px solid var(--line); color:var(--text);
+  font-family:var(--font-mono); font-size:14px; padding:11px 12px; outline:none;
+}
+.field input:focus{ border-color:var(--blue-bright); }
+.btn-primary{
+  width:100%; background:var(--holo); background-size:220% 220%; border:none; color:#fff; font-family:var(--font-mono);
+  font-size:12px; letter-spacing:0.1em; text-transform:uppercase; padding:13px; cursor:pointer; margin-top:6px;
+  box-shadow: 0 6px 24px rgba(107,92,255,0.28);
+}
+.btn-primary:hover{ background-position:60% 40%; }
+.auth-toggle{ text-align:center; margin-top:16px; font-size:11px; color:var(--text-dim); }
+.auth-toggle button{ background:none; border:none; color:var(--blue-bright); font-family:var(--font-mono); cursor:pointer; font-size:11px; text-decoration:underline; }
+.auth-error{ color:#ff4d5e; font-size:11px; margin-top:10px; min-height:14px; }
+
+/* ===== dashboard ===== */
+#dashboard{ display:none; padding: 26px 24px 0; }
+.grid{ display:grid; grid-template-columns: 2fr 3fr; gap:20px; align-items:start; }
+@media (max-width:860px){ .grid{ grid-template-columns:1fr; } }
+
+.panel-head{
+  display:flex; align-items:center; justify-content:space-between; padding:13px 16px; border-bottom:1px solid var(--line);
+}
+.panel-head .eyebrow{ color:var(--text); font-size:11px; letter-spacing:0.12em; }
+.panel-body{ padding:16px; }
+
+/* ---- history panel : gauge + fiche joueurs ---- */
+.gauge-row{ display:flex; align-items:center; gap:16px; padding:16px; border-bottom:1px solid var(--line); }
+.gauge{
+  position:relative; width:56px; height:56px; border-radius:50%; flex-shrink:0;
+  background: conic-gradient(from -90deg, var(--cyan), var(--blue-bright), var(--violet) calc(var(--pct) * 1%), var(--line) 0);
+}
+.gauge::before{
+  content:''; position:absolute; inset:6px; border-radius:50%; background:var(--panel-solid);
+  box-shadow: 0 0 18px 2px var(--blue-glow);
+}
+.gauge span{
+  position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+  font-size:12px; font-weight:bold; color:var(--text);
+}
+.gauge-label{ font-size:10px; letter-spacing:0.08em; color:var(--text-dim); text-transform:uppercase; line-height:1.6; }
+.gauge-label b{ color:var(--text); font-weight:normal; }
+
+.history-date{ font-size:10px; letter-spacing:0.08em; color:var(--text-dim); padding:10px 16px; border-bottom:1px solid var(--line); text-transform:uppercase; }
+.history-list{ display:flex; flex-direction:column; }
+.history-row{
+  display:grid; grid-template-columns: auto 1fr auto; align-items:center; gap:10px;
+  padding:11px 16px; border-bottom:1px solid var(--line); font-size:12px;
+}
+.history-row:last-child{ border-bottom:none; }
+.player-id{ font-size:10px; color:var(--text-faint); }
+.player-name{ color:var(--text); }
+.player-name .you-tag{ color:var(--blue-bright); font-size:9px; margin-left:6px; letter-spacing:0.06em; }
+.status-tag{ display:flex; align-items:center; gap:6px; font-size:9px; letter-spacing:0.08em; text-transform:uppercase; padding:4px 8px; border:1px solid var(--line); white-space:nowrap; }
+.status-tag.done{ color:#1fb8c9; border-color:rgba(31,184,201,0.35); }
+.status-tag.pending{ color:var(--text-faint); }
+.status-tag .box{ width:7px; height:7px; border:1px solid currentColor; flex-shrink:0; }
+.status-tag.done .box{ background:currentColor; }
+
+.demo-note{ font-size:9px; color:var(--text-faint); letter-spacing:0.04em; padding:10px 16px; border-top:1px solid var(--line); }
+
+/* ---- mission panel : spec sheet ---- */
+.right-stack{ display:flex; flex-direction:column; gap:20px; }
+.mission-panel{ min-height:340px; overflow:hidden; }
+.mission-panel .panel-body{ display:flex; flex-direction:column; height:100%; position:relative; }
+.mission-topmeta{ display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:16px; }
+.mission-code{ font-size:10px; color:var(--chrome-dim); letter-spacing:0.08em; }
+.mission-crystal{ width:64px; height:64px; opacity:0.8; }
+.mission-title{ font-family:var(--font-display); font-size:26px; text-transform:uppercase; line-height:1.15; margin-bottom:16px; }
+.mission-text{ font-size:13.5px; line-height:1.75; flex-grow:1; }
+.mission-text .line{ display:block; margin-bottom:10px; }
+.mission-text .quote{ color:var(--violet); }
+.mission-footer{ display:flex; align-items:flex-end; justify-content:space-between; margin-top:16px; padding-top:14px; border-top:1px solid var(--line); }
+.difficulty{ font-size:10px; color:var(--text-dim); letter-spacing:0.08em; text-transform:uppercase; }
+.difficulty .hearts{ margin-top:4px; letter-spacing:2px; }
+.difficulty .filled{ color:var(--blue-bright); }
+.difficulty .empty{ color:var(--line-bright); }
+.countdown-block{ text-align:right; }
+.countdown-block .eyebrow{ margin-bottom:4px; }
+.countdown-block .val{ font-size:15px; color:var(--text); }
+.barcode-row{ display:flex; align-items:center; gap:10px; margin-top:14px; }
+.barcode{ height:22px; flex-grow:0; }
+.barcode-num{ font-size:9px; color:var(--text-faint); letter-spacing:0.1em; }
+
+/* ---- validation panel : réticule ---- */
+.validate-panel .panel-body{ display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; }
+.validate-text{ font-size:12.5px; color:var(--text-dim); max-width:300px; }
+.validate-text b{ color:var(--text); font-weight:normal; }
+.reticle-toggle{ display:flex; align-items:center; gap:12px; cursor:pointer; user-select:none; }
+.reticle{ position:relative; width:40px; height:40px; flex-shrink:0; }
+.reticle svg{ width:100%; height:100%; }
+.reticle .ring{ fill:none; stroke:var(--line-bright); stroke-width:1.5; transition:stroke .15s ease; }
+.reticle .cross{ stroke:var(--line-bright); stroke-width:1.2; transition:stroke .15s ease; }
+.reticle .dot{ fill:var(--blue-bright); opacity:0; transition:opacity .15s ease; }
+.reticle-toggle.checked .ring{ stroke:var(--blue-bright); }
+.reticle-toggle.checked .cross{ stroke:var(--blue-bright); }
+.reticle-toggle.checked .dot{ opacity:1; }
+.check-label{ font-size:11px; letter-spacing:0.08em; text-transform:uppercase; color:var(--text); }
+</style>
+</head>
+<body>
+
+<div class="bg-halo">
+  <div class="blob blob-1"></div>
+  <div class="blob blob-2"></div>
+  <div class="blob blob-3"></div>
+</div>
+<svg class="bg-noise" width="100%" height="100%">
+  <filter id="noiseFilter"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" stitchTiles="stitch"/></filter>
+  <rect width="100%" height="100%" filter="url(#noiseFilter)"/>
+</svg>
+
+<div class="page">
+
+  <header class="hero">
+    <svg class="hero-grid" viewBox="0 0 1180 220" preserveAspectRatio="none">
+      <g stroke="#232a44" stroke-width="1" fill="none">
+        <line x1="0" y1="40" x2="1180" y2="10"/>
+        <line x1="0" y1="90" x2="1180" y2="70"/>
+        <line x1="0" y1="140" x2="1180" y2="150"/>
+        <line x1="0" y1="190" x2="1180" y2="210"/>
+        <line x1="150" y1="0" x2="60" y2="220"/>
+        <line x1="400" y1="0" x2="380" y2="220"/>
+        <line x1="750" y1="0" x2="770" y2="220"/>
+        <line x1="1020" y1="0" x2="1080" y2="220"/>
+      </g>
+    </svg>
+    <div class="hero-row1">
+      <span class="ref-code">MDJ // FILE_014 // RÉSEAU CIVIL</span>
+      <div class="hero-icons">
+        <div class="status-pill"><span class="dot"></span>SYSTÈME ACTIF</div>
+        <svg viewBox="0 0 24 24" fill="none" stroke="var(--chrome)" stroke-width="1.2"><circle cx="12" cy="12" r="9.5"/><path d="M12 4v3M12 17v3M4 12h3M17 12h3"/><path d="M12 12L15 8L12 12L9 15Z" fill="var(--chrome-dim)" stroke="none"/></svg>
+        <svg viewBox="0 0 24 24" fill="none" stroke="var(--chrome)" stroke-width="1.2"><circle cx="12" cy="12" r="9.5"/><ellipse cx="12" cy="12" rx="4" ry="9.5"/><path d="M2.5 12h19M4 7.5h16M4 16.5h16"/></svg>
+        <button class="logout-btn" id="logout-btn">Déconnexion</button>
+      </div>
+    </div>
+    <h1 class="hero-title">Missions<br>du jour</h1>
+    <div class="hero-meta">
+      <span>PROTOCOLE_ <b>ACTIF</b></span>
+      <span>ROTATION_ <b>17:00 // 24H</b></span>
+      <span>COORD_ <b id="coord-val">44.0000°N 04.0000°E</b></span>
+      <span id="clock-live">HEURE_ <b></b></span>
+    </div>
+    <div class="ruler"></div>
+  </header>
+
+  <div id="auth-screen">
+    <div class="frame auth-card">
+      <div class="corner-mark tl"></div><div class="corner-mark tr"></div>
+      <div class="corner-mark bl"></div><div class="corner-mark br"></div>
+      <div class="eyebrow" id="auth-eyebrow">Accès // Terminal</div>
+      <div class="auth-title" id="auth-title">Connexion</div>
+      <div class="field"><label>Identifiant</label><input type="text" id="auth-username" autocomplete="off"></div>
+      <div class="field"><label>Mot de passe</label><input type="password" id="auth-password"></div>
+      <button class="btn-primary" id="auth-submit">Entrer</button>
+      <div class="auth-error" id="auth-error"></div>
+      <div class="auth-toggle">
+        <span id="auth-toggle-text">Pas encore de compte ?</span>
+        <button id="auth-toggle-btn">Créer un compte</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="dashboard">
+    <div class="grid">
+
+      <!-- HISTORY 2/5 -->
+      <div class="frame">
+        <div class="corner-mark tl"></div><div class="corner-mark tr"></div>
+        <div class="corner-mark bl"></div><div class="corner-mark br"></div>
+        <div class="panel-head"><span class="eyebrow">Historique // Citoyens</span></div>
+        <div class="gauge-row">
+          <div class="gauge" id="gauge" style="--pct:0"><span id="gauge-pct">0%</span></div>
+          <div class="gauge-label">TAUX DE COMPLÉTION<br><b id="gauge-count">0 / 0</b> CITOYENS AUJOURD'HUI</div>
+        </div>
+        <div class="history-date" id="history-date"></div>
+        <div class="history-list" id="history-list"></div>
+        <div class="demo-note">Fiche de démonstration — remplacée par les vrais citoyens une fois le compte multi-utilisateurs branché.</div>
+      </div>
+
+      <!-- RIGHT STACK 3/5 -->
+      <div class="right-stack">
+        <div class="frame mission-panel">
+          <div class="corner-mark tl"></div><div class="corner-mark tr"></div>
+          <div class="corner-mark bl"></div><div class="corner-mark br"></div>
+          <div class="panel-head"><span class="eyebrow">Mission du jour</span></div>
+          <div class="panel-body">
+            <div class="mission-topmeta">
+              <span class="mission-code" id="mission-code"></span>
+              <svg class="mission-crystal" viewBox="0 0 100 100" fill="none">
+                <defs><radialGradient id="crystalGlow" cx="50%" cy="50%" r="50%">
+                  <stop offset="0%" stop-color="var(--blue)" stop-opacity="0.35"/>
+                  <stop offset="100%" stop-color="var(--blue)" stop-opacity="0"/>
+                </radialGradient></defs>
+                <circle cx="50" cy="50" r="46" fill="url(#crystalGlow)"/>
+                <g stroke="var(--chrome)" stroke-width="1">
+                  <path d="M50 10 L85 35 L72 80 L28 80 L15 35 Z"/>
+                  <path d="M50 10 L50 55"/>
+                  <path d="M15 35 L50 55 L85 35"/>
+                  <path d="M28 80 L50 55 L72 80"/>
+                </g>
+              </svg>
+            </div>
+            <div class="mission-title" id="mission-title"></div>
+            <div class="mission-text" id="mission-text"></div>
+            <div class="mission-footer">
+              <div class="difficulty">DIFFICULTÉ_<div class="hearts" id="difficulty-hearts"></div></div>
+              <div class="countdown-block"><div class="eyebrow">Prochaine rotation</div><div class="val" id="countdown"></div></div>
+            </div>
+            <div class="barcode-row">
+              <svg class="barcode" viewBox="0 0 200 30" id="barcode-svg"></svg>
+              <span class="barcode-num" id="barcode-num"></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="frame validate-panel">
+          <div class="corner-mark tl"></div><div class="corner-mark tr"></div>
+          <div class="corner-mark bl"></div><div class="corner-mark br"></div>
+          <div class="panel-head"><span class="eyebrow">Validation</span></div>
+          <div class="panel-body">
+            <div class="validate-text">As-tu accompli la mission ? <b>Coche uniquement si c'est fait.</b></div>
+            <div class="reticle-toggle" id="check-toggle">
+              <div class="reticle">
+                <svg viewBox="0 0 40 40">
+                  <circle class="ring" cx="20" cy="20" r="15"/>
+                  <g class="cross"><path d="M20 2v8M20 30v8M2 20h8M30 20h8"/></g>
+                  <circle class="dot" cx="20" cy="20" r="4"/>
+                </svg>
+              </div>
+              <span class="check-label" id="check-label">Mission non effectuée</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+/* injecte les repères d'angle (crosshair) dans chaque .frame */
+const CROSS_SVG = `<svg viewBox="0 0 11 11" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="5.5" cy="5.5" r="4.2" fill="none" stroke="#5c6274" stroke-width="1"/>
+  <path d="M5.5 0v3M5.5 8v3M0 5.5h3M8 5.5h3" stroke="#5c6274" stroke-width="1"/>
+</svg>`;
+document.querySelectorAll('.corner-mark').forEach(el => el.innerHTML = CROSS_SVG);
+
+/* ===== barcode décoratif ===== */
+(function drawBarcode(){
+  const svg = document.getElementById('barcode-svg');
+  let x = 0; let bars = '';
+  const seed = 91827;
+  for(let i=0;i<28;i++){
+    const w = 1 + ((seed * (i+7)) % 4);
+    if(i % 2 === 0){ bars += `<rect x="${x}" y="0" width="${w}" height="30" fill="#5c6274"/>`; }
+    x += w + 1;
+  }
+  svg.setAttribute('viewBox', `0 0 ${x} 30`);
+  svg.innerHTML = bars;
+  document.getElementById('barcode-num').textContent = 'REF ' + String(seed).slice(0,6);
+})();
+
+/* ===== horloge live ===== */
+function tickClock(){
+  const el = document.getElementById('clock-live');
+  const now = new Date();
+  el.innerHTML = 'HEURE_ <b>' + now.toLocaleTimeString('fr-FR') + '</b>';
+}
+tickClock(); setInterval(tickClock, 1000);
+
+// ===================== MISSIONS =====================
+const MISSIONS = [
+  { code:"MISSION #001", title:"Le gagnant du Loto 💰", diff:2, steps:[
+    "Appeler un citoyen au téléphone : «Félicitations, vous avez gagné 10 000 $. Rendez-vous dans 10 minutes au parking de [lieu].»",
+    "Il arrive… il n'y a absolument rien."
+  ]},
+  { code:"MISSION #002", title:"Le client fantôme 🚕", diff:3, steps:[
+    "Prendre un taxi et demander au chauffeur de vous emmener à une adresse.",
+    "À mi-chemin : «Attendez… je viens de recevoir un message. Finalement, c'est l'adresse d'à côté.»",
+    "Répéter 4 fois."
+  ]},
+  { code:"MISSION #003", title:"Le faux mariage 💍", diff:4, steps:[
+    "Trouver un inconnu et lui proposer 500 $ pour jouer le rôle de votre conjoint pendant 10 minutes devant quelqu'un d'autre."
+  ]},
+  { code:"MISSION #004", title:"L'inspection sanitaire 🥼", diff:3, steps:[
+    "Entrer dans un restaurant avec un costume sérieux et annoncer au patron que vous êtes là pour une inspection sanitaire improvisée.",
+    "Lui poser des questions complètement absurdes sur la provenance de ses frites."
+  ]},
+  { code:"MISSION #005", title:"Le véhicule ultra-secret 🚗", diff:2, steps:[
+    "Demander à quelqu'un de vous conduire jusqu'à un endroit précis pour récupérer «un véhicule extrêmement important».",
+    "Sur place, il n'y a qu'un vélo. Le remercier chaleureusement et repartir avec."
+  ]},
+  { code:"MISSION #006", title:"Le recrutement gouvernemental 🕴️", diff:2, steps:[
+    "Aborder un citoyen dans la rue et lui dire qu'il a été sélectionné pour une opération gouvernementale secrète.",
+    "Lui donner une mission totalement inutile : aller acheter une bouteille d'eau et la déposer sur un banc."
+  ]},
+  { code:"MISSION #007", title:"Le témoin essentiel 👀", diff:1, steps:[
+    "Aller voir un citoyen au hasard : «Monsieur, vous êtes le seul témoin de ce qui s'est passé hier soir.»",
+    "Quand il demande quoi : «Justement… c'est ce que j'essaie de savoir.»"
+  ]},
+  { code:"MISSION #008", title:"La livraison impossible 📦", diff:2, steps:[
+    "Donner une adresse à un citoyen et lui demander de livrer une enveloppe vide à quelqu'un.",
+    "Une fois arrivé, le destinataire lui dit : «Parfait, maintenant ramenez-la à son expéditeur.»"
+  ]},
+  { code:"MISSION #009", title:"Le contrat à 1 $ 📄", diff:3, steps:[
+    "Convaincre un citoyen de signer un contrat extrêmement officiel lui donnant 1 $ en échange de « services futurs indéterminés ».",
+    "Le contrat doit être présenté comme extrêmement important."
+  ]},
+  { code:"MISSION #010", title:"Le briefing de crise 🚨", diff:4, steps:[
+    "Réunir 3–4 citoyens dans un endroit discret et leur annoncer très sérieusement : «Nous avons 15 minutes avant que ça commence.»",
+    "Refuser de leur dire ce qui va commencer.",
+    "À la fin des 15 minutes : «Bon… finalement c'est annulé.»"
+  ]},
+  { code:"MISSION #011", title:"Le faux héritage 💰", diff:3, steps:[
+    "Appeler un citoyen et lui annoncer qu'il est l'unique héritier d'une fortune de 50 000 $.",
+    "Lui donner rendez-vous devant une maison… puis lui demander de retrouver le notaire qui n'existe pas."
+  ]},
+  { code:"MISSION #012", title:"Le test de conduite 🚗", diff:2, steps:[
+    "Arrêter quelqu'un dans la rue et lui proposer un «test de conduite professionnel».",
+    "Lui demander de faire trois tours de pâté de maisons, de klaxonner devant un magasin et de revenir.",
+    "À la fin : «Désolé, vous avez échoué.»"
+  ]},
+  { code:"MISSION #013", title:"Le mystérieux sac 👜", diff:2, steps:[
+    "Donner un sac vide à un citoyen et lui dire de le déposer dans une voiture précise.",
+    "Quand il demande ce qu'il contient : «Moins tu sais, mieux c'est.»"
+  ]},
+  { code:"MISSION #014", title:"Le client VIP ⭐", diff:2, steps:[
+    "Entrer dans un restaurant et annoncer que vous êtes un critique gastronomique extrêmement important.",
+    "Commander uniquement un verre d'eau, prendre des notes pendant 10 minutes et repartir."
+  ]},
+  { code:"MISSION #015", title:"La mission de surveillance 👀", diff:1, steps:[
+    "Demander à un citoyen de surveiller une voiture pendant 5 minutes.",
+    "Après 5 minutes, revenir et lui demander : «Elle a fait quelque chose de suspect ?»",
+    "Peu importe sa réponse : «Je le savais…»"
+  ]},
+  { code:"MISSION #016", title:"Le mauvais rendez-vous 📱", diff:1, steps:[
+    "Appeler quelqu'un et lui dire : «Je suis devant.»",
+    "S'il demande «devant quoi ?» → «Devant toi.»",
+    "Puis raccrocher."
+  ]},
+  { code:"MISSION #017", title:"Le contrôle des chaussures 👞", diff:2, steps:[
+    "Aborder un citoyen et lui expliquer qu'une nouvelle réglementation municipale impose de vérifier les chaussures des citoyens.",
+    "Examiner ses pieds très sérieusement puis lui donner une note sur 10."
+  ]},
+  { code:"MISSION #018", title:"Le chauffeur mystère 🚕", diff:3, steps:[
+    "Prendre un taxi et demander au chauffeur de conduire sans poser de questions.",
+    "Lui donner plusieurs directions absurdes pendant quelques minutes.",
+    "Puis lui dire : «Vous avez réussi le test. Vous pouvez me ramener là où vous m'avez pris.»"
+  ]},
+  { code:"MISSION #019", title:"Le recrutement du garde du corps 🛡️", diff:3, steps:[
+    "Proposer à un citoyen de devenir votre garde du corps pour 5 minutes.",
+    "Votre seule instruction : «Si quelqu'un me regarde bizarrement, protégez-moi.»",
+    "Aller ensuite volontairement dans les endroits les plus fréquentés."
+  ]},
+  { code:"MISSION #020", title:"L'objet extrêmement précieux 💎", diff:2, steps:[
+    "Demander à un citoyen de transporter une boîte vide jusqu'à un endroit précis.",
+    "Lui répéter plusieurs fois : «Attention, ça vaut plus que ta vie.»",
+    "À l'arrivée : récupérer la boîte et partir sans explication."
+  ]},
+  { code:"MISSION #021", title:"La conférence de presse 🎤", diff:4, steps:[
+    "Monter sur un trottoir avec plusieurs citoyens autour de vous et annoncer que vous allez faire une déclaration importante.",
+    "Faire une conférence de presse de 2 minutes sur un sujet totalement banal, comme la disparition d'une poubelle."
+  ]},
+  { code:"MISSION #022", title:"Le mauvais suspect 🚨", diff:1, steps:[
+    "Accoster un citoyen : «C'est vous ?»",
+    "S'il répond oui/non : «D'accord, merci.»",
+    "Puis partir immédiatement en courant."
+  ]},
+  { code:"MISSION #023", title:"Le rendez-vous à 3 heures ⏰", diff:2, steps:[
+    "Donner rendez-vous à quelqu'un à une heure précise dans un endroit précis.",
+    "Arriver en avance avec une mallette vide.",
+    "Quand il arrive : «Parfait. Vous êtes à l'heure. C'était tout.»"
+  ]},
+  { code:"MISSION #024", title:"Le faux déménagement 📦", diff:3, steps:[
+    "Demander à plusieurs citoyens de vous aider à déplacer un objet totalement ridicule, comme une poubelle ou une chaise, sur plusieurs dizaines de mètres.",
+    "Une fois arrivé : «Merci, finalement je préfère l'autre emplacement.»"
+  ]},
+  { code:"MISSION #025", title:"La mission impossible 🕵️", diff:5, steps:[
+    "Donner à un citoyen une liste de 3 tâches très sérieuses : trouver une voiture rouge ; parler à un policier ; obtenir le prénom d'un inconnu.",
+    "Quand il revient avec tout : «Parfait. Maintenant oubliez tout ce que je viens de vous demander.»"
+  ]}
+];
+
+function hashStr(s){
+  let h = 0;
+  for(let i=0;i<s.length;i++){ h = (h*31 + s.charCodeAt(i)) >>> 0; }
+  return h;
+}
+
+function getMissionDayIndex(date){
+  const d = new Date(date);
+  const hour = d.getHours();
+  const effectiveDate = new Date(d);
+  if(hour < 17){ effectiveDate.setDate(effectiveDate.getDate() - 1); }
+  effectiveDate.setHours(0,0,0,0);
+  const epoch = new Date(2026,0,1);
+  return Math.floor((effectiveDate - epoch) / 86400000);
+}
+function getNextRotation(){
+  const now = new Date(); const next = new Date(now);
+  next.setHours(17,0,0,0);
+  if(now >= next){ next.setDate(next.getDate()+1); }
+  return next;
+}
+function formatCountdown(ms){
+  if(ms<0) ms=0;
+  const h=Math.floor(ms/3600000), m=Math.floor((ms%3600000)/60000), s=Math.floor((ms%60000)/1000);
+  return String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
+}
+
+// ===================== SUPABASE =====================
+const SIGNUPS_OPEN = true;
+const SUPABASE_URL = 'https://mxkpraaqnwqgnwenjatm.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im14a3ByYWFxbndxZ253ZW5qYXRtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk4MDA3NDksImV4cCI6MjEwNTM3Njc0OX0.HvHnpEDp4cit89HdGKwHoumAC_egF38Jm8J_yC8oxr4';
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+async function hashPassword(pw){
+  const enc = new TextEncoder().encode(pw);
+  const buf = await crypto.subtle.digest('SHA-256', enc);
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+// ===================== AUTH (comptes stockés dans Supabase) =====================
+const LS_ID='missions_citoyen_id', LS_NOM='missions_citoyen_nom';
+function getSession(){
+  const id=localStorage.getItem(LS_ID), nom=localStorage.getItem(LS_NOM);
+  return (id && nom) ? {id, nom} : null;
+}
+function setSession(id, nom){ localStorage.setItem(LS_ID, id); localStorage.setItem(LS_NOM, nom); }
+function clearSession(){ localStorage.removeItem(LS_ID); localStorage.removeItem(LS_NOM); }
+
+let authMode='login';
+const authScreen=document.getElementById('auth-screen'), dashboard=document.getElementById('dashboard');
+const authTitle=document.getElementById('auth-title'), authEyebrow=document.getElementById('auth-eyebrow');
+const authToggleText=document.getElementById('auth-toggle-text'), authToggleBtn=document.getElementById('auth-toggle-btn');
+const authError=document.getElementById('auth-error'), logoutBtn=document.getElementById('logout-btn');
+const authSubmitBtn=document.getElementById('auth-submit');
+
+authToggleBtn.addEventListener('click', ()=>{
+  if(!SIGNUPS_OPEN && authMode==='login'){
+    authError.textContent = 'Les inscriptions sont fermées pour le moment.';
+    return;
+  }
+  authMode = authMode==='login' ? 'signup' : 'login';
+  authError.textContent='';
+  if(authMode==='signup'){
+    authTitle.textContent='Créer un compte'; authEyebrow.textContent='Enrôlement // Terminal';
+    authToggleText.textContent='Déjà un compte ?'; authToggleBtn.textContent='Se connecter';
+  } else {
+    authTitle.textContent='Connexion'; authEyebrow.textContent='Accès // Terminal';
+    authToggleText.textContent='Pas encore de compte ?'; authToggleBtn.textContent='Créer un compte';
+  }
+});
+
+authSubmitBtn.addEventListener('click', async () => {
+  const identifiant=document.getElementById('auth-username').value.trim();
+  const password=document.getElementById('auth-password').value;
+  authError.textContent='';
+  if(!identifiant || !password){ authError.textContent='Identifiant et mot de passe requis.'; return; }
+  if(authMode==='signup' && !SIGNUPS_OPEN){ authError.textContent='Les inscriptions sont fermées pour le moment.'; return; }
+  authSubmitBtn.disabled=true; authSubmitBtn.textContent='…';
+  try{
+    const hash = await hashPassword(password);
+    if(authMode==='signup'){
+      const { data: existing } = await sb.from('citoyens').select('id').eq('identifiant', identifiant).maybeSingle();
+      if(existing){ authError.textContent='Cet identifiant existe déjà.'; return; }
+      const { data: created, error } = await sb.from('citoyens')
+        .insert({ identifiant, mot_de_passe_hash: hash })
+        .select('id, identifiant').single();
+      if(error) throw error;
+      setSession(created.id, created.identifiant);
+      await enterDashboard(created.id, created.identifiant);
+    } else {
+      const { data: user, error } = await sb.from('citoyens')
+        .select('id, identifiant, mot_de_passe_hash').eq('identifiant', identifiant).maybeSingle();
+      if(error) throw error;
+      if(!user || user.mot_de_passe_hash !== hash){ authError.textContent='Identifiant ou mot de passe incorrect.'; return; }
+      sb.from('citoyens').update({ derniere_connexion: new Date().toISOString() }).eq('id', user.id).then(()=>{});
+      setSession(user.id, user.identifiant);
+      await enterDashboard(user.id, user.identifiant);
+    }
+  } catch(err){
+    console.error(err);
+    authError.textContent = 'Connexion au serveur impossible. Réessaie.';
+  } finally {
+    authSubmitBtn.disabled=false; authSubmitBtn.textContent='Entrer';
+  }
+});
+logoutBtn.addEventListener('click', ()=>{ clearSession(); location.reload(); });
+
+// ===================== ATTRIBUTION DE MISSION (sans doublon le même jour) =====================
+async function getOrAssignMission(citoyenId){
+  const dayIndex = getMissionDayIndex(new Date());
+  const { data: existing } = await sb.from('attributions')
+    .select('id, mission_code, effectuee').eq('citoyen_id', citoyenId).eq('jour', dayIndex).maybeSingle();
+  if(existing){
+    const mission = MISSIONS.find(m => m.code === existing.mission_code) || MISSIONS[0];
+    return { mission, dayIndex, attributionId: existing.id, effectuee: existing.effectuee };
+  }
+  const { data: usedRows } = await sb.from('attributions').select('mission_code').eq('jour', dayIndex);
+  const usedCodes = new Set((usedRows||[]).map(r => r.mission_code));
+  let pool = MISSIONS.filter(m => !usedCodes.has(m.code));
+  if(pool.length === 0) pool = MISSIONS;
+  const mission = pool[Math.floor(Math.random()*pool.length)];
+  const { data: inserted, error } = await sb.from('attributions')
+    .insert({ citoyen_id: citoyenId, jour: dayIndex, mission_code: mission.code, effectuee:false })
+    .select('id, effectuee').single();
+  if(error){
+    const { data: retry } = await sb.from('attributions')
+      .select('id, mission_code, effectuee').eq('citoyen_id', citoyenId).eq('jour', dayIndex).maybeSingle();
+    if(retry){
+      const m2 = MISSIONS.find(m => m.code === retry.mission_code) || mission;
+      return { mission:m2, dayIndex, attributionId: retry.id, effectuee: retry.effectuee };
+    }
+    throw error;
+  }
+  return { mission, dayIndex, attributionId: inserted.id, effectuee: inserted.effectuee };
+}
+
+function renderMission(mission){
+  document.getElementById('mission-code').textContent = mission.code;
+  document.getElementById('mission-title').textContent = mission.title;
+  document.getElementById('mission-text').innerHTML = mission.steps.map(s =>
+    `<span class="line">${s.replace(/«([^»]+)»/g, '<span class="quote">«$1»</span>')}</span>`).join('');
+  const heartsEl = document.getElementById('difficulty-hearts');
+  let hearts=''; for(let i=1;i<=5;i++){ hearts += `<span class="${i<=mission.diff?'filled':'empty'}">♥</span>`; }
+  heartsEl.innerHTML = hearts;
+}
+
+async function renderHistory(dayIndex, myCitoyenId){
+  document.getElementById('history-date').textContent =
+    new Date().toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'}).toUpperCase();
+  const list=document.getElementById('history-list'); list.innerHTML='';
+  const { data: rows, error } = await sb.from('attributions')
+    .select('citoyen_id, effectuee, citoyens(identifiant)')
+    .eq('jour', dayIndex).order('created_at', { ascending:true });
+  if(error){ console.error(error); return; }
+  let doneCount=0;
+  (rows||[]).forEach((r,i) => {
+    const isYou = r.citoyen_id === myCitoyenId;
+    const nom = r.citoyens ? r.citoyens.identifiant : '???';
+    if(r.effectuee) doneCount++;
+    const row=document.createElement('div'); row.className='history-row';
+    row.innerHTML = `
+      <span class="player-id">#${String(100+i).padStart(3,'0')}</span>
+      <span class="player-name">${nom}${isYou?'<span class="you-tag">TOI</span>':''}</span>
+      <span class="status-tag ${r.effectuee?'done':'pending'}"><span class="box"></span>${r.effectuee?'Effectuée':'Non effectuée'}</span>
+    `;
+    list.appendChild(row);
+  });
+  const total = (rows||[]).length || 1;
+  const pct = Math.round((doneCount/total)*100);
+  document.getElementById('gauge').style.setProperty('--pct', pct);
+  document.getElementById('gauge-pct').textContent = pct+'%';
+  document.getElementById('gauge-count').textContent = doneCount+' / '+(rows?rows.length:0);
+}
+
+function renderCheckState(attributionId, initialDone, onToggled){
+  const toggle=document.getElementById('check-toggle'), label=document.getElementById('check-label');
+  let done = initialDone;
+  function refresh(){
+    toggle.classList.toggle('checked', done);
+    label.textContent = done ? 'Mission effectuée' : 'Mission non effectuée';
+  }
+  refresh();
+  toggle.onclick = async () => {
+    done = !done; refresh();
+    const { error } = await sb.from('attributions')
+      .update({ effectuee: done, updated_at: new Date().toISOString() }).eq('id', attributionId);
+    if(error){ console.error(error); done = !done; refresh(); return; }
+    onToggled();
+  };
+}
+
+function startCountdown(){
+  const el=document.getElementById('countdown');
+  function tick(){ el.textContent = formatCountdown(getNextRotation()-new Date()); }
+  tick(); setInterval(tick,1000);
+}
+
+async function enterDashboard(citoyenId, nom){
+  authScreen.style.display='none'; dashboard.style.display='block'; logoutBtn.style.display='inline-block';
+  const { mission, dayIndex, attributionId, effectuee } = await getOrAssignMission(citoyenId);
+  renderMission(mission);
+  await renderHistory(dayIndex, citoyenId);
+  renderCheckState(attributionId, effectuee, () => renderHistory(dayIndex, citoyenId));
+  startCountdown();
+}
+
+(function initAuthUi(){
+  if(!SIGNUPS_OPEN){
+    authToggleText.textContent = 'Les inscriptions sont fermées pour le moment.';
+    authToggleBtn.style.display = 'none';
+  }
+})();
+
+(function init(){
+  const session=getSession();
+  if(session){ enterDashboard(session.id, session.nom); }
+})();
+</script>
+
+</body>
+</html>
