@@ -239,6 +239,46 @@ body{
 .reticle-toggle.checked .cross{ stroke:var(--blue-bright); }
 .reticle-toggle.checked .dot{ opacity:1; }
 .check-label{ font-size:11px; letter-spacing:0.08em; text-transform:uppercase; color:var(--text); }
+
+/* ---- admin : bouton, modale, emoji picker ---- */
+.admin-btn{ border-color: rgba(146,87,255,0.4); color: var(--violet); }
+.admin-btn:hover{ background: rgba(146,87,255,0.08); border-color: var(--violet); }
+
+.modal-overlay{
+  position:fixed; inset:0; z-index:50; display:none; align-items:center; justify-content:center;
+  background: rgba(20,22,45,0.35); backdrop-filter: blur(6px); padding:20px;
+}
+.modal-overlay.open{ display:flex; }
+.modal-card{ width:100%; max-width:420px; }
+.modal-close{ background:none; border:none; color:var(--text-dim); font-size:14px; cursor:pointer; line-height:1; }
+.modal-close:hover{ color:var(--text); }
+.field textarea{
+  width:100%; background:var(--panel-solid); border:1px solid var(--line); color:var(--text);
+  font-family:var(--font-mono); font-size:13px; padding:10px 12px; outline:none; resize:vertical;
+}
+.field textarea:focus{ border-color:var(--blue-bright); }
+.emoji-trigger-row{ margin-bottom:14px; }
+.emoji-trigger-btn{
+  background:var(--panel-solid); border:1px solid var(--line); color:var(--text);
+  font-family:var(--font-mono); font-size:12px; padding:8px 12px; cursor:pointer;
+}
+.emoji-trigger-btn:hover{ border-color:var(--line-bright); }
+
+.emoji-picker{
+  position:fixed; bottom:20px; left:50%; transform:translateX(-50%);
+  width:calc(100% - 40px); max-width:420px; max-height:300px;
+  display:none; flex-direction:column; z-index:60; overflow:hidden;
+}
+.emoji-picker.open{ display:flex; }
+.emoji-tabs{ display:flex; gap:4px; padding:8px; border-bottom:1px solid var(--line); overflow-x:auto; flex-shrink:0; }
+.emoji-tabs button{
+  background:none; border:none; font-size:17px; padding:4px 7px; cursor:pointer;
+  border-radius:6px; opacity:0.45; flex-shrink:0;
+}
+.emoji-tabs button.active{ opacity:1; background:var(--panel-solid); }
+.emoji-grid{ display:grid; grid-template-columns: repeat(7, 1fr); gap:2px; padding:10px; overflow-y:auto; }
+.emoji-grid button{ background:none; border:none; font-size:19px; padding:6px 0; cursor:pointer; border-radius:6px; }
+.emoji-grid button:hover{ background:var(--panel-solid); }
 </style>
 </head>
 <body>
@@ -274,6 +314,7 @@ body{
         <div class="status-pill"><span class="dot"></span>SYSTÈME ACTIF</div>
         <svg viewBox="0 0 24 24" fill="none" stroke="var(--chrome)" stroke-width="1.2"><circle cx="12" cy="12" r="9.5"/><path d="M12 4v3M12 17v3M4 12h3M17 12h3"/><path d="M12 12L15 8L12 12L9 15Z" fill="var(--chrome-dim)" stroke="none"/></svg>
         <svg viewBox="0 0 24 24" fill="none" stroke="var(--chrome)" stroke-width="1.2"><circle cx="12" cy="12" r="9.5"/><ellipse cx="12" cy="12" rx="4" ry="9.5"/><path d="M2.5 12h19M4 7.5h16M4 16.5h16"/></svg>
+        <button class="logout-btn admin-btn" id="admin-btn" style="display:none;">+ Nouvelle mission</button>
         <button class="logout-btn" id="logout-btn">Déconnexion</button>
       </div>
     </div>
@@ -382,6 +423,39 @@ body{
 
 </div>
 
+<div class="modal-overlay" id="mission-modal-overlay">
+  <div class="frame modal-card">
+    <div class="corner-mark tl"></div><div class="corner-mark tr"></div>
+    <div class="corner-mark bl"></div><div class="corner-mark br"></div>
+    <div class="panel-head">
+      <span class="eyebrow">Admin // Nouvelle mission</span>
+      <button class="modal-close" id="mission-modal-close">✕</button>
+    </div>
+    <div class="panel-body">
+      <div class="field">
+        <label>Titre</label>
+        <input type="text" id="new-mission-titre" autocomplete="off" placeholder="Le faux mariage 💍">
+      </div>
+      <div class="field">
+        <label>Contenu</label>
+        <textarea id="new-mission-contenu" rows="5" placeholder="Décris la mission, étape par étape..."></textarea>
+      </div>
+      <div class="emoji-trigger-row">
+        <button class="emoji-trigger-btn" id="emoji-trigger-btn" type="button">😀 Emoji</button>
+      </div>
+      <button class="btn-primary" id="new-mission-submit">Publier la mission</button>
+      <div class="auth-error" id="new-mission-error"></div>
+    </div>
+  </div>
+
+  <div class="frame emoji-picker" id="emoji-picker">
+    <div class="corner-mark tl"></div><div class="corner-mark tr"></div>
+    <div class="corner-mark bl"></div><div class="corner-mark br"></div>
+    <div class="emoji-tabs" id="emoji-tabs"></div>
+    <div class="emoji-grid" id="emoji-grid"></div>
+  </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 /* injecte les repères d'angle (crosshair) dans chaque .frame */
@@ -413,125 +487,6 @@ function tickClock(){
   el.innerHTML = 'HEURE_ <b>' + now.toLocaleTimeString('fr-FR') + '</b>';
 }
 tickClock(); setInterval(tickClock, 1000);
-
-// ===================== MISSIONS =====================
-const MISSIONS = [
-  { code:"MISSION #001", title:"Le gagnant du Loto 💰", diff:2, steps:[
-    "Appeler un citoyen au téléphone : «Félicitations, vous avez gagné 10 000 $. Rendez-vous dans 10 minutes au parking de [lieu].»",
-    "Il arrive… il n'y a absolument rien."
-  ]},
-  { code:"MISSION #002", title:"Le client fantôme 🚕", diff:3, steps:[
-    "Prendre un taxi et demander au chauffeur de vous emmener à une adresse.",
-    "À mi-chemin : «Attendez… je viens de recevoir un message. Finalement, c'est l'adresse d'à côté.»",
-    "Répéter 4 fois."
-  ]},
-  { code:"MISSION #003", title:"Le faux mariage 💍", diff:4, steps:[
-    "Trouver un inconnu et lui proposer 500 $ pour jouer le rôle de votre conjoint pendant 10 minutes devant quelqu'un d'autre."
-  ]},
-  { code:"MISSION #004", title:"L'inspection sanitaire 🥼", diff:3, steps:[
-    "Entrer dans un restaurant avec un costume sérieux et annoncer au patron que vous êtes là pour une inspection sanitaire improvisée.",
-    "Lui poser des questions complètement absurdes sur la provenance de ses frites."
-  ]},
-  { code:"MISSION #005", title:"Le véhicule ultra-secret 🚗", diff:2, steps:[
-    "Demander à quelqu'un de vous conduire jusqu'à un endroit précis pour récupérer «un véhicule extrêmement important».",
-    "Sur place, il n'y a qu'un vélo. Le remercier chaleureusement et repartir avec."
-  ]},
-  { code:"MISSION #006", title:"Le recrutement gouvernemental 🕴️", diff:2, steps:[
-    "Aborder un citoyen dans la rue et lui dire qu'il a été sélectionné pour une opération gouvernementale secrète.",
-    "Lui donner une mission totalement inutile : aller acheter une bouteille d'eau et la déposer sur un banc."
-  ]},
-  { code:"MISSION #007", title:"Le témoin essentiel 👀", diff:1, steps:[
-    "Aller voir un citoyen au hasard : «Monsieur, vous êtes le seul témoin de ce qui s'est passé hier soir.»",
-    "Quand il demande quoi : «Justement… c'est ce que j'essaie de savoir.»"
-  ]},
-  { code:"MISSION #008", title:"La livraison impossible 📦", diff:2, steps:[
-    "Donner une adresse à un citoyen et lui demander de livrer une enveloppe vide à quelqu'un.",
-    "Une fois arrivé, le destinataire lui dit : «Parfait, maintenant ramenez-la à son expéditeur.»"
-  ]},
-  { code:"MISSION #009", title:"Le contrat à 1 $ 📄", diff:3, steps:[
-    "Convaincre un citoyen de signer un contrat extrêmement officiel lui donnant 1 $ en échange de « services futurs indéterminés ».",
-    "Le contrat doit être présenté comme extrêmement important."
-  ]},
-  { code:"MISSION #010", title:"Le briefing de crise 🚨", diff:4, steps:[
-    "Réunir 3–4 citoyens dans un endroit discret et leur annoncer très sérieusement : «Nous avons 15 minutes avant que ça commence.»",
-    "Refuser de leur dire ce qui va commencer.",
-    "À la fin des 15 minutes : «Bon… finalement c'est annulé.»"
-  ]},
-  { code:"MISSION #011", title:"Le faux héritage 💰", diff:3, steps:[
-    "Appeler un citoyen et lui annoncer qu'il est l'unique héritier d'une fortune de 50 000 $.",
-    "Lui donner rendez-vous devant une maison… puis lui demander de retrouver le notaire qui n'existe pas."
-  ]},
-  { code:"MISSION #012", title:"Le test de conduite 🚗", diff:2, steps:[
-    "Arrêter quelqu'un dans la rue et lui proposer un «test de conduite professionnel».",
-    "Lui demander de faire trois tours de pâté de maisons, de klaxonner devant un magasin et de revenir.",
-    "À la fin : «Désolé, vous avez échoué.»"
-  ]},
-  { code:"MISSION #013", title:"Le mystérieux sac 👜", diff:2, steps:[
-    "Donner un sac vide à un citoyen et lui dire de le déposer dans une voiture précise.",
-    "Quand il demande ce qu'il contient : «Moins tu sais, mieux c'est.»"
-  ]},
-  { code:"MISSION #014", title:"Le client VIP ⭐", diff:2, steps:[
-    "Entrer dans un restaurant et annoncer que vous êtes un critique gastronomique extrêmement important.",
-    "Commander uniquement un verre d'eau, prendre des notes pendant 10 minutes et repartir."
-  ]},
-  { code:"MISSION #015", title:"La mission de surveillance 👀", diff:1, steps:[
-    "Demander à un citoyen de surveiller une voiture pendant 5 minutes.",
-    "Après 5 minutes, revenir et lui demander : «Elle a fait quelque chose de suspect ?»",
-    "Peu importe sa réponse : «Je le savais…»"
-  ]},
-  { code:"MISSION #016", title:"Le mauvais rendez-vous 📱", diff:1, steps:[
-    "Appeler quelqu'un et lui dire : «Je suis devant.»",
-    "S'il demande «devant quoi ?» → «Devant toi.»",
-    "Puis raccrocher."
-  ]},
-  { code:"MISSION #017", title:"Le contrôle des chaussures 👞", diff:2, steps:[
-    "Aborder un citoyen et lui expliquer qu'une nouvelle réglementation municipale impose de vérifier les chaussures des citoyens.",
-    "Examiner ses pieds très sérieusement puis lui donner une note sur 10."
-  ]},
-  { code:"MISSION #018", title:"Le chauffeur mystère 🚕", diff:3, steps:[
-    "Prendre un taxi et demander au chauffeur de conduire sans poser de questions.",
-    "Lui donner plusieurs directions absurdes pendant quelques minutes.",
-    "Puis lui dire : «Vous avez réussi le test. Vous pouvez me ramener là où vous m'avez pris.»"
-  ]},
-  { code:"MISSION #019", title:"Le recrutement du garde du corps 🛡️", diff:3, steps:[
-    "Proposer à un citoyen de devenir votre garde du corps pour 5 minutes.",
-    "Votre seule instruction : «Si quelqu'un me regarde bizarrement, protégez-moi.»",
-    "Aller ensuite volontairement dans les endroits les plus fréquentés."
-  ]},
-  { code:"MISSION #020", title:"L'objet extrêmement précieux 💎", diff:2, steps:[
-    "Demander à un citoyen de transporter une boîte vide jusqu'à un endroit précis.",
-    "Lui répéter plusieurs fois : «Attention, ça vaut plus que ta vie.»",
-    "À l'arrivée : récupérer la boîte et partir sans explication."
-  ]},
-  { code:"MISSION #021", title:"La conférence de presse 🎤", diff:4, steps:[
-    "Monter sur un trottoir avec plusieurs citoyens autour de vous et annoncer que vous allez faire une déclaration importante.",
-    "Faire une conférence de presse de 2 minutes sur un sujet totalement banal, comme la disparition d'une poubelle."
-  ]},
-  { code:"MISSION #022", title:"Le mauvais suspect 🚨", diff:1, steps:[
-    "Accoster un citoyen : «C'est vous ?»",
-    "S'il répond oui/non : «D'accord, merci.»",
-    "Puis partir immédiatement en courant."
-  ]},
-  { code:"MISSION #023", title:"Le rendez-vous à 3 heures ⏰", diff:2, steps:[
-    "Donner rendez-vous à quelqu'un à une heure précise dans un endroit précis.",
-    "Arriver en avance avec une mallette vide.",
-    "Quand il arrive : «Parfait. Vous êtes à l'heure. C'était tout.»"
-  ]},
-  { code:"MISSION #024", title:"Le faux déménagement 📦", diff:3, steps:[
-    "Demander à plusieurs citoyens de vous aider à déplacer un objet totalement ridicule, comme une poubelle ou une chaise, sur plusieurs dizaines de mètres.",
-    "Une fois arrivé : «Merci, finalement je préfère l'autre emplacement.»"
-  ]},
-  { code:"MISSION #025", title:"La mission impossible 🕵️", diff:5, steps:[
-    "Donner à un citoyen une liste de 3 tâches très sérieuses : trouver une voiture rouge ; parler à un policier ; obtenir le prénom d'un inconnu.",
-    "Quand il revient avec tout : «Parfait. Maintenant oubliez tout ce que je viens de vous demander.»"
-  ]}
-];
-
-function hashStr(s){
-  let h = 0;
-  for(let i=0;i<s.length;i++){ h = (h*31 + s.charCodeAt(i)) >>> 0; }
-  return h;
-}
 
 function getMissionDayIndex(date){
   const d = new Date(date);
@@ -634,19 +589,30 @@ authSubmitBtn.addEventListener('click', async () => {
 });
 logoutBtn.addEventListener('click', ()=>{ clearSession(); location.reload(); });
 
+// ===================== POOL DE MISSIONS (depuis Supabase) =====================
+let MISSION_POOL = [];
+async function loadMissionPool(){
+  const { data, error } = await sb.from('missions').select('id, code, titre, contenu, diff');
+  if(error){ console.error(error); MISSION_POOL = []; return; }
+  MISSION_POOL = data || [];
+}
+
 // ===================== ATTRIBUTION DE MISSION (sans doublon le même jour) =====================
 async function getOrAssignMission(citoyenId){
   const dayIndex = getMissionDayIndex(new Date());
   const { data: existing } = await sb.from('attributions')
     .select('id, mission_code, effectuee').eq('citoyen_id', citoyenId).eq('jour', dayIndex).maybeSingle();
   if(existing){
-    const mission = MISSIONS.find(m => m.code === existing.mission_code) || MISSIONS[0];
+    const mission = MISSION_POOL.find(m => m.code === existing.mission_code) || null;
     return { mission, dayIndex, attributionId: existing.id, effectuee: existing.effectuee };
+  }
+  if(MISSION_POOL.length === 0){
+    return { mission:null, dayIndex, attributionId:null, effectuee:false };
   }
   const { data: usedRows } = await sb.from('attributions').select('mission_code').eq('jour', dayIndex);
   const usedCodes = new Set((usedRows||[]).map(r => r.mission_code));
-  let pool = MISSIONS.filter(m => !usedCodes.has(m.code));
-  if(pool.length === 0) pool = MISSIONS;
+  let pool = MISSION_POOL.filter(m => !usedCodes.has(m.code));
+  if(pool.length === 0) pool = MISSION_POOL;
   const mission = pool[Math.floor(Math.random()*pool.length)];
   const { data: inserted, error } = await sb.from('attributions')
     .insert({ citoyen_id: citoyenId, jour: dayIndex, mission_code: mission.code, effectuee:false })
@@ -655,7 +621,7 @@ async function getOrAssignMission(citoyenId){
     const { data: retry } = await sb.from('attributions')
       .select('id, mission_code, effectuee').eq('citoyen_id', citoyenId).eq('jour', dayIndex).maybeSingle();
     if(retry){
-      const m2 = MISSIONS.find(m => m.code === retry.mission_code) || mission;
+      const m2 = MISSION_POOL.find(m => m.code === retry.mission_code) || mission;
       return { mission:m2, dayIndex, attributionId: retry.id, effectuee: retry.effectuee };
     }
     throw error;
@@ -664,12 +630,20 @@ async function getOrAssignMission(citoyenId){
 }
 
 function renderMission(mission){
+  if(!mission){
+    document.getElementById('mission-code').textContent = '';
+    document.getElementById('mission-title').textContent = 'Aucune mission disponible';
+    document.getElementById('mission-text').innerHTML = '';
+    document.getElementById('difficulty-hearts').innerHTML = '';
+    return;
+  }
   document.getElementById('mission-code').textContent = mission.code;
-  document.getElementById('mission-title').textContent = mission.title;
-  document.getElementById('mission-text').innerHTML = mission.steps.map(s =>
+  document.getElementById('mission-title').textContent = mission.titre;
+  const steps = (mission.contenu||'').split('\n').map(s=>s.trim()).filter(Boolean);
+  document.getElementById('mission-text').innerHTML = steps.map(s =>
     `<span class="line">${s.replace(/«([^»]+)»/g, '<span class="quote">«$1»</span>')}</span>`).join('');
   const heartsEl = document.getElementById('difficulty-hearts');
-  let hearts=''; for(let i=1;i<=5;i++){ hearts += `<span class="${i<=mission.diff?'filled':'empty'}">♥</span>`; }
+  let hearts=''; for(let i=1;i<=5;i++){ hearts += `<span class="${i<=(mission.diff||2)?'filled':'empty'}">♥</span>`; }
   heartsEl.innerHTML = hearts;
 }
 
@@ -726,10 +700,15 @@ function startCountdown(){
 
 async function enterDashboard(citoyenId, nom){
   authScreen.style.display='none'; dashboard.style.display='block'; logoutBtn.style.display='inline-block';
+  const isAdmin = nom.toLowerCase() === ADMIN_IDENTIFIANT;
+  document.getElementById('admin-btn').style.display = isAdmin ? 'inline-block' : 'none';
+  await loadMissionPool();
   const { mission, dayIndex, attributionId, effectuee } = await getOrAssignMission(citoyenId);
   renderMission(mission);
   await renderHistory(dayIndex, citoyenId);
-  renderCheckState(attributionId, effectuee, () => renderHistory(dayIndex, citoyenId));
+  if(attributionId){
+    renderCheckState(attributionId, effectuee, () => renderHistory(dayIndex, citoyenId));
+  }
   startCountdown();
 }
 
@@ -739,6 +718,99 @@ async function enterDashboard(citoyenId, nom){
     authToggleBtn.style.display = 'none';
   }
 })();
+
+// ===================== ADMIN : émojis + création de mission =====================
+const ADMIN_IDENTIFIANT = 'dex';
+
+const EMOJI_CATEGORIES = [
+  { icon:'😀', items: ['😀','😃','😄','😁','😆','😅','🤣','😂','🙂','🙃','😉','😊','😇','🥰','😍','🤩','😘','😗','😚','😙','😋','😛','😜','🤪','😝','🤑','🤗','🤭','🤫','🤔','🤐','🤨','😐','😑','😶','🙄','😏','😣','😥','😮','😯','😪','😴','😌','🥲','😒','🙁','☹️','😔','😕','🫤','😢','😭','😦','😧','😨','😩','🤯','😬','😰','😱','🥵','🥶','😳','😵','🥴','😷','🤒','🤕','🤢','🤮','🥳','😎','🤓','🧐','😤','😡','😠','🤬','😈','👿','💀','☠️','👻','👽','🤖','💩','😺','😸','😹','😻','😼','😽','🙀','😿','😾'] },
+  { icon:'🐶', items: ['🐶','🐱','🐭','🐹','🐰','🦊','🐻','🐼','🐨','🐯','🦁','🐮','🐷','🐽','🐸','🐵','🙈','🙉','🙊','🐒','🐔','🐧','🐦','🐤','🐣','🐥','🦆','🦅','🦉','🦇','🐺','🐗','🐴','🦄','🐝','🐛','🦋','🐌','🐞','🐜','🐢','🐍','🦎','🐙','🦑','🦐','🦀','🐡','🐠','🐟','🐬','🐳','🐋','🦈','🐊','🐅','🐆','🦓','🦍','🐘','🦏','🐪','🐫','🦒','🐃','🐂','🐄','🐎','🐖','🐏','🐑','🐐','🦌','🐕','🐩','🐈','🐓','🦃','🦚','🦜','🦢','🕊️','🐇','🦔','🐁','🐀'] },
+  { icon:'🍔', items: ['🍏','🍎','🍐','🍊','🍋','🍌','🍉','🍇','🍓','🫐','🍈','🍒','🍑','🥭','🍍','🥥','🥝','🍅','🍆','🥑','🥦','🥬','🥒','🌶️','🫑','🌽','🥕','🧄','🧅','🥔','🍠','🥐','🍞','🥖','🧀','🥚','🍳','🥞','🧇','🥓','🍔','🍟','🍕','🌭','🥪','🌮','🌯','🥙','🍝','🍜','🍲','🍣','🍱','🍤','🍙','🍚','🍘','🍢','🍡','🍦','🍨','🍧','🍰','🎂','🍮','🍭','🍬','🍫','🍿','🍩','🍪','🥜','🍯','🥛','☕️','🍵','🧃','🥤','🍺','🍻','🥂','🍷','🥃','🍸','🍹','🍾'] },
+  { icon:'⚽️', items: ['⚽️','🏀','🏈','⚾️','🥎','🎾','🏐','🏉','🎱','🏓','🏸','🏒','🏑','🥍','🏏','🥅','⛳️','🪁','🏹','🎣','🥊','🥋','🎽','🛹','🛷','⛸️','🎿','🏂','🏋️','🤼','🤸','⛹️','🤺','🏌️','🏇','🧘','🏄','🏊','🚣','🧗','🚴','🏆','🥇','🥈','🥉','🏅','🎖️','🎗️','🎫','🎪','🎭','🎨','🎬','🎤','🎧','🎼','🎹','🥁','🎷','🎺','🎸','🎻','🎲','♟️','🎯','🎳','🎮','🎰','🧩'] },
+  { icon:'✈️', items: ['🚗','🚕','🚙','🚌','🚎','🏎️','🚓','🚑','🚒','🚐','🚚','🚛','🚜','🛵','🏍️','🚲','🛴','🚨','🚂','🚆','🚇','🚊','✈️','🛫','🛬','🛩️','🚀','🛸','🚁','⛵️','🚤','🛳️','⛴️','🚢','⚓️','🚧','🚦','🚥','🗺️','🗿','🗽','🗼','🏰','🏯','🎡','🎢','🎠','⛲️','🏖️','🏝️','🏜️','🌋','⛰️','🏔️','🗻','🏕️','🏠','🏡','🏢','🏬','🏥','🏦','🏨','⛪️','🕌','🕍','🛕','🌆','🌇','🌃','🌉'] },
+  { icon:'💡', items: ['⌚️','📱','💻','⌨️','🖥️','🖨️','🖱️','🕹️','💾','📷','📸','📹','🎥','📞','☎️','📺','📻','🔋','🔌','💡','🔦','🕯️','🧯','💸','💵','💰','💳','💎','🔧','🔨','⚙️','🔩','⛓️','🔫','🧨','🔪','🗡️','🛡️','⚰️','🏺','🔮','📿','🔭','🔬','💊','💉','🩹','🧴','🧻','🚽','🚿','🛁','🔑','🚪','🛋️','🛏️','🧸','🖼️','🎁','🎈','🎀','🎉','🎊','✉️','📩','📦','📜','📅','📆','📈','📉','📋','📁','📚','📖','🔖','📎','📐','✂️','🖊️','🖍️','📝','🔍','🔒','🔓'] },
+  { icon:'❤️', items: ['❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💔','❣️','💕','💞','💓','💗','💖','💘','💝','☮️','✝️','☪️','🕉️','☸️','✡️','☯️','🔀','🔁','▶️','⏸️','⏹️','⏭️','⏮️','⏫','⏬','🔼','🔽','➡️','⬅️','⬆️','⬇️','↩️','↪️','🔃','🔄','🚫','❌','⭕️','💯','♨️','⚠️','♻️','✅','❇️','✳️','❎','💠','🌀','💤','♿️','🅿️','🆗','🆕','0️⃣','1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣','9️⃣','🔟','#️⃣'] },
+  { icon:'🏁', items: ['🏁','🚩','🎌','🏳️','🏴','🏳️‍🌈','🇫🇷','🇺🇸','🇬🇧','🇩🇪','🇪🇸','🇮🇹','🇵🇹','🇨🇦','🇯🇵','🇰🇷','🇨🇳','🇧🇷','🇲🇽','🇷🇺','🇮🇳','🇦🇺','🇳🇱','🇧🇪','🇨🇭','🇸🇪','🇳🇴','🇩🇰','🇫🇮','🇬🇷','🇹🇷','🇲🇦','🇩🇿','🇹🇳'] }
+];
+
+let activeField = null;
+document.getElementById('new-mission-titre').addEventListener('focus', e => activeField = e.target);
+document.getElementById('new-mission-contenu').addEventListener('focus', e => activeField = e.target);
+
+function insertAtCursor(field, text){
+  if(!field) return;
+  const start = field.selectionStart ?? field.value.length;
+  const end = field.selectionEnd ?? field.value.length;
+  field.value = field.value.slice(0,start) + text + field.value.slice(end);
+  const pos = start + text.length;
+  field.focus();
+  field.setSelectionRange(pos,pos);
+}
+
+function renderEmojiTabs(activeIndex){
+  const tabs = document.getElementById('emoji-tabs');
+  tabs.innerHTML = EMOJI_CATEGORIES.map((c,i) => `<button type="button" data-i="${i}" class="${i===activeIndex?'active':''}">${c.icon}</button>`).join('');
+  tabs.querySelectorAll('button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const i = parseInt(btn.dataset.i);
+      renderEmojiTabs(i);
+      renderEmojiGrid(i);
+    });
+  });
+}
+function renderEmojiGrid(catIndex){
+  const grid = document.getElementById('emoji-grid');
+  grid.innerHTML = EMOJI_CATEGORIES[catIndex].items.map(e => `<button type="button">${e}</button>`).join('');
+  grid.querySelectorAll('button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      insertAtCursor(activeField || document.getElementById('new-mission-titre'), btn.textContent);
+    });
+  });
+}
+
+const emojiPicker = document.getElementById('emoji-picker');
+document.getElementById('emoji-trigger-btn').addEventListener('click', () => {
+  const open = emojiPicker.classList.toggle('open');
+  if(open){ renderEmojiTabs(0); renderEmojiGrid(0); }
+});
+
+const missionModalOverlay = document.getElementById('mission-modal-overlay');
+document.getElementById('admin-btn').addEventListener('click', () => {
+  missionModalOverlay.classList.add('open');
+});
+document.getElementById('mission-modal-close').addEventListener('click', () => {
+  missionModalOverlay.classList.remove('open');
+  emojiPicker.classList.remove('open');
+});
+
+document.getElementById('new-mission-submit').addEventListener('click', async () => {
+  const titreEl = document.getElementById('new-mission-titre');
+  const contenuEl = document.getElementById('new-mission-contenu');
+  const errEl = document.getElementById('new-mission-error');
+  const submitBtn = document.getElementById('new-mission-submit');
+  const titre = titreEl.value.trim();
+  const contenu = contenuEl.value.trim();
+  errEl.textContent = '';
+  if(!titre || !contenu){ errEl.textContent = 'Titre et contenu requis.'; return; }
+  submitBtn.disabled = true; submitBtn.textContent = '…';
+  try{
+    const { count } = await sb.from('missions').select('*', { count:'exact', head:true });
+    const code = 'MISSION #' + String((count||0)+1).padStart(3,'0');
+    const { data, error } = await sb.from('missions')
+      .insert({ code, titre, contenu, diff: 2 })
+      .select('id, code, titre, contenu, diff').single();
+    if(error) throw error;
+    MISSION_POOL.push(data);
+    titreEl.value = ''; contenuEl.value = '';
+    missionModalOverlay.classList.remove('open');
+    emojiPicker.classList.remove('open');
+  } catch(err){
+    console.error(err);
+    errEl.textContent = "Impossible d'enregistrer la mission.";
+  } finally {
+    submitBtn.disabled = false; submitBtn.textContent = 'Publier la mission';
+  }
+});
 
 (function init(){
   const session=getSession();
